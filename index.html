@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>30-Year Emotional Football Manager PWA</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0b0f19">
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Dashboard Status Bar -->
+        <header class="status-bar">
+            <div class="status-item">
+                <span class="label">Season</span>
+                <span id="stat-season" class="value">1</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Week</span>
+                <span id="stat-week" class="value">1/38</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Date</span>
+                <span id="stat-date" class="value">-</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Budget</span>
+                <span id="stat-budget" class="value">£50.0M</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Morale</span>
+                <span id="stat-morale" class="value">100%</span>
+            </div>
+        </header>
+
+        <!-- Multi-Competition Tracking Panel -->
+        <div class="competition-tracker">
+            <div class="comp-badge">🏆 League: <span id="comp-league">Championship (7th)</span></div>
+            <div class="comp-badge">🇬🇧 FA Cup: <span id="comp-cup">3rd Round</span></div>
+            <div class="comp-badge">🇪🇺 Europe: <span id="comp-europe">UEL (League Stage)</span></div>
+        </div>
+
+        <!-- Dynamic Sky Sports Breaking News Ticker Overlay -->
+        <div id="breaking-news-ticker" class="breaking-news hidden">
+            <div class="ticker-badge">SKY SPORTS BREAKING</div>
+            <div id="ticker-text" class="ticker-content">Initializing global football networks...</div>
+        </div>
+
+        <!-- Main Viewport Content Areas -->
+        <main class="content-viewport">
+            <!-- TAB 1: SQUAD -->
+            <section id="tab-squad" class="tab-content active">
+                <div class="section-header">
+                    <h2>Squad Management</h2>
+                    <button id="btn-advance-week" class="primary-btn">Simulate Week ⚽</button>
+                </div>
+                <div id="squad-list" class="card-grid"></div>
+            </section>
+
+            <!-- TAB 2: TRANSFER OFFICE -->
+            <section id="tab-transfer" class="tab-content">
+                <div class="section-header">
+                    <h2>Transfer Market & Board Office</h2>
+                    <span class="subtext">2026/27 Window Active</span>
+                </div>
+                <div class="market-controls">
+                    <button id="btn-scout-market" class="secondary-btn">Scout Elite Talent</button>
+                </div>
+                <div id="transfer-list" class="card-grid"></div>
+            </section>
+
+            <!-- TAB 3: MATCHDAY & AI GOVERNANCE -->
+            <section id="tab-matchday" class="tab-content">
+                <div class="section-header">
+                    <h2>Matchday & Disciplinary Hub</h2>
+                    <span class="subtext">2026/27 Strict Rules Enforced</span>
+                </div>
+                <div class="governance-card">
+                    <h3>FA / FIFA / Media Directives</h3>
+                    <p>Current Match Regulation: 5s Goal Kicks, 10s Subs, Zero Mouth-Covering Insults.</p>
+                    <div id="ai-ruling-display" class="ruling-box">
+                        Awaiting regulatory telemetry from match official feeds...
+                    </div>
+                </div>
+                <div class="match-simulation-panel">
+                    <button id="btn-simulate-match" class="primary-btn full-width">Play Fixture & Trigger AI Presser</button>
+                </div>
+            </section>
+
+            <section id="tab-league" class="tab-content">
+                <div class="section-header">
+                    <h2>League Table</h2>
+                    <span class="subtext">Live 20-club standings</span>
+                </div>
+                <div id="league-table" class="league-table"></div>
+                <div class="section-header">
+                    <h2>Golden Boot</h2>
+                </div>
+                <div id="golden-boot-list" class="card-grid"></div>
+                <div class="section-header">
+                    <h2>Storylines</h2>
+                </div>
+                <div id="story-feed"></div>
+            </section>
+
+            <section id="tab-inbox" class="tab-content">
+                <div class="section-header">
+                    <h2>Transfer Inbox</h2>
+                    <span class="subtext" id="window-status">Window closed</span>
+                </div>
+                <div id="bid-list"></div>
+                <div class="section-header">
+                    <h2>Loan Requests</h2>
+                </div>
+                <div id="loan-list"></div>
+            </section>
+        </main>
+
+        <!-- Modern Tab Bar Navigation -->
+        <nav class="tab-bar">
+            <button class="tab-trigger active" data-target="tab-squad">
+                <span class="tab-icon">📋</span>
+                <span class="tab-label">SQUAD</span>
+            </button>
+            <button class="tab-trigger" data-target="tab-transfer">
+                <span class="tab-icon">💼</span>
+                <span class="tab-label">TRANSFERS</span>
+            </button>
+            <button class="tab-trigger" data-target="tab-matchday">
+                <span class="tab-icon">⚽</span>
+                <span class="tab-label">MATCHDAY</span>
+            </button>
+            <button class="tab-trigger" data-target="tab-league">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">TABLE</span>
+            </button>
+            <button class="tab-trigger" data-target="tab-inbox">
+                <span class="tab-icon">📨</span>
+                <span class="tab-label">INBOX</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Alert Modal Overlay -->
+    <div id="alert-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 id="modal-title">Notification</h3>
+            <p id="modal-body">Text content here...</p>
+            <button id="modal-close" class="primary-btn">Acknowledge</button>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('ServiceWorker registered successfully:', reg.scope))
+                    .catch(err => console.error('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

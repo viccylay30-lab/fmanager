@@ -1,0 +1,10 @@
+{
+  "name": "30-Year Emotional Football Manager PWA",
+  "short_name": "FM 30-Year PWA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "icons": []
+}

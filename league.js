@@ -14,6 +14,7 @@ import { createPlayer } from './attributes.js';
 import { simulateMatch } from './match-engine.js';
 import { generateManagerProfile, maybeSwitchTactic } from './manager-ai.js';
 import { evaluateSackRisk } from './boardroom.js';
+import { applyMatchStatsToPlayers } from './career.js';
 
 const RIVAL_NAMES = [
     'Ironbridge FC', 'Castlemoor Town', 'Redgate Athletic', 'Vale United', 'Harborne City',
@@ -22,18 +23,35 @@ const RIVAL_NAMES = [
     'Hollow Vale', 'Marchmont Rovers', 'Quillfield Town', 'Ashcombe United'
 ];
 
-const POSITIONS_TEMPLATE = ['GK', 'CB', 'CB', 'FB', 'FB', 'CM', 'CM', 'LW', 'ST', 'ST'];
+const SQUAD_TEMPLATE = [
+    { position: 'GK', count: 2 },
+    { position: 'CB', count: 4 },
+    { position: 'FB', count: 4 },
+    { position: 'CM', count: 5 },
+    { position: 'LW', count: 3 },
+    { position: 'ST', count: 3 }
+]; // 21 players, 2+ per position - same depth as the human-managed club
 
-/** Roll a fresh 20-team league: 19 rivals with real (persistent) squads. */
+/** Roll a fresh 20-team league: 19 rivals with real (persistent, full-depth) squads. */
 export function generateRivals() {
     return RIVAL_NAMES.map((name, idx) => {
         // Spread quality across the division so there's a real top/mid/bottom -
         // not every rival is the same strength.
         const tier = 3 + Math.round((idx / (RIVAL_NAMES.length - 1)) * 6) + (Math.random() < 0.5 ? -1 : 0);
-        const squad = POSITIONS_TEMPLATE.map((pos, i) => createPlayer({
-            id: `${name}-${i}`, name: `${name.split(' ')[0]} ${pos}${i}`,
-            position: pos, age: 20 + Math.floor(Math.random() * 14), qualityTier: Math.max(2, Math.min(9, tier))
-        }));
+        const baseTier = Math.max(2, Math.min(9, tier));
+        const squad = [];
+        let playerIdx = 0;
+        SQUAD_TEMPLATE.forEach(({ position, count }) => {
+            for (let i = 0; i < count; i++) {
+                const roleOffset = i === 0 ? 1 : i === count - 1 ? -2 : 0;
+                const qualityTier = Math.max(2, Math.min(9, baseTier + roleOffset + (Math.random() < 0.5 ? 0 : -1)));
+                squad.push(createPlayer({
+                    id: `${name}-${playerIdx}`, name: `${name.split(' ')[0]} ${position}${playerIdx}`,
+                    position, age: 18 + Math.floor(Math.random() * 16), qualityTier
+                }));
+                playerIdx++;
+            }
+        });
         return {
             id: name, name, squad,
             tactic: ['possession', 'counter', 'press', 'defensive'][Math.floor(Math.random() * 4)],
@@ -135,6 +153,7 @@ export function simulateRound(round, teamsById, table, weather, isBigMatch = fal
         const awayTeam = teamsById[awayIdx];
         const result = simulateMatch({ home: homeTeam, away: awayTeam, weather, isBigMatch });
         applyResult(table, homeTeam.id, awayTeam.id, result.homeGoals, result.awayGoals);
+        applyMatchStatsToPlayers(result, homeTeam.squad, awayTeam.squad);
 
         // Track rival form for manager-ai reactions - skip 'YOU', app.js tracks that separately.
         const pushForm = (team, letter) => {

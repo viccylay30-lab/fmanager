@@ -176,7 +176,7 @@ export function createPlayer({ id, name, position, age, qualityTier = 5, trait =
         recentMinutes: 0,        // minutes played this "month" tick, resets after development roll
         appearances: 0,
         internationalCaps: 0,
-        contractYearsRemaining: 3,
+        contractYearsRemaining: 1 + Math.floor(Math.random() * 4), // 1-4 years, staggered like a real squad
         marketValue: null,       // computed lazily by development.js on first call
         developmentLog: []       // [{ month, caBefore, caAfter, note }]
     };

@@ -155,6 +155,44 @@ function resolveChance(taker, baseQuality, isBigMatch) {
 }
 
 /**
+ * Pick an assist provider for a goal - weighted toward passing/vision,
+ * excludes the scorer and goalkeepers. Not every goal gets an assist
+ * (some are solo efforts), matching real football.
+ */
+function pickAssister(squad, scorerName) {
+    if (Math.random() < 0.25) return null; // solo goal, no assist
+    const eligible = squad.filter(p => !p.isInjured && p.position !== 'GK' && p.name !== scorerName);
+    if (eligible.length === 0) return null;
+    const weights = eligible.map(p => norm(p.attrs.passing) + norm(p.attrs.vision));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < eligible.length; i++) {
+        roll -= weights[i];
+        if (roll <= 0) return eligible[i].name;
+    }
+    return eligible[eligible.length - 1].name;
+}
+
+/**
+ * Compute a simple per-match rating (1-10 scale) for every available player
+ * on both sides. Not a full minute-by-minute model - built from goals,
+ * assists, and team result, with variance scaled by the player's
+ * consistency hidden attribute (inconsistent players swing further from
+ * their "true" level match to match).
+ */
+function computeMatchRatings(squad, teamGoals, opponentGoals, goalScorers, assisters) {
+    const teamWon = teamGoals > opponentGoals, teamLost = teamGoals < opponentGoals;
+    return squad.filter(p => !p.isInjured && !p.onLoanAt).map(p => {
+        const goals = goalScorers.filter(n => n === p.name).length;
+        const assists = assisters.filter(n => n === p.name).length;
+        const resultBonus = teamWon ? 0.25 : teamLost ? -0.2 : 0.05;
+        const variance = (Math.random() * 2 - 1) * (1 - p.hidden.consistency / 20) * 0.6;
+        const rating = clamp(6.0 + goals * 0.9 + assists * 0.5 + resultBonus + variance, 1, 10);
+        return { name: p.name, goals, assists, rating: +rating.toFixed(1) };
+    });
+}
+
+/**
  * Simulate one match as a chronological sequence of "moments" (abstracted
  * minute windows, not full tick-by-tick) rather than pre-rolling both teams'
  * total chance counts up front. This matters for one reason: a team's
@@ -198,7 +236,8 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
             const baseQuality = 0.3 + Math.random() * 0.4;
             if (resolveChance(taker, baseQuality, isBigMatch)) {
                 homeGoals++;
-                events.push({ team: 'home', type: 'goal', player: taker?.name, moment });
+                const assister = taker ? pickAssister(home.squad, taker.name) : null;
+                events.push({ team: 'home', type: 'goal', player: taker?.name, assist: assister, moment });
             }
         }
         if (Math.random() < awayMomentRate) {
@@ -206,7 +245,8 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
             const baseQuality = 0.3 + Math.random() * 0.4;
             if (resolveChance(taker, baseQuality, isBigMatch)) {
                 awayGoals++;
-                events.push({ team: 'away', type: 'goal', player: taker?.name, moment });
+                const assister = taker ? pickAssister(away.squad, taker.name) : null;
+                events.push({ team: 'away', type: 'goal', player: taker?.name, assist: assister, moment });
             }
         }
     }
@@ -219,11 +259,23 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
         events.push({ team: side, type: 'red_card' });
     }
 
+    const homeScorers = events.filter(e => e.team === 'home' && e.type === 'goal').map(e => e.player);
+    const homeAssisters = events.filter(e => e.team === 'home' && e.type === 'goal' && e.assist).map(e => e.assist);
+    const awayScorers = events.filter(e => e.team === 'away' && e.type === 'goal').map(e => e.player);
+    const awayAssisters = events.filter(e => e.team === 'away' && e.type === 'goal' && e.assist).map(e => e.assist);
+
+    const homeRatings = computeMatchRatings(home.squad, homeGoals, awayGoals, homeScorers, homeAssisters);
+    const awayRatings = computeMatchRatings(away.squad, awayGoals, homeGoals, awayScorers, awayAssisters);
+    const playerRatings = [...homeRatings, ...awayRatings];
+    const mvp = playerRatings.reduce((best, p) => (!best || p.rating > best.rating ? p : best), null);
+
     return {
         homeGoals, awayGoals,
         homeXG: +homeXGAccum.toFixed(2),
         awayXG: +awayXGAccum.toFixed(2),
         events,
+        playerRatings,
+        mvp: mvp ? mvp.name : null,
         winner: homeGoals > awayGoals ? home.name : awayGoals > homeGoals ? away.name : 'Draw'
     };
 }

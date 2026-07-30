@@ -16,6 +16,7 @@
 <body>
     <div class="app-container">
         <!-- Top Dashboard Status Bar -->
+        <div id="club-header" class="club-header"></div>
         <header class="status-bar">
             <div class="status-item">
                 <span class="label">Season</span>
@@ -58,9 +59,9 @@
             <section id="tab-squad" class="tab-content active">
                 <div class="section-header">
                     <h2>Squad Management</h2>
-                    <button id="btn-advance-week" class="primary-btn">Simulate Week ⚽</button>
                 </div>
                 <div id="squad-list" class="card-grid"></div>
+                <button id="btn-advance-week" class="primary-btn full-width" style="margin-top:12px;">Advance to Next Week ➜</button>
             </section>
 
             <!-- TAB 2: TRANSFER OFFICE -->
@@ -77,6 +78,12 @@
 
             <!-- TAB 3: MATCHDAY & AI GOVERNANCE -->
             <section id="tab-matchday" class="tab-content">
+                <div class="section-header">
+                    <h2>Tactics</h2>
+                    <span class="subtext" id="tactic-familiarity-label">Familiarity: -</span>
+                </div>
+                <div id="tactic-picker" class="tactic-picker"></div>
+
                 <div class="section-header">
                     <h2>Matchday & Disciplinary Hub</h2>
                     <span class="subtext">2026/27 Strict Rules Enforced</span>
@@ -96,9 +103,15 @@
             <section id="tab-league" class="tab-content">
                 <div class="section-header">
                     <h2>League Table</h2>
-                    <span class="subtext">Live 20-club standings</span>
+                    <span class="subtext" id="division-label">Division 1</span>
                 </div>
                 <div id="league-table" class="league-table"></div>
+                <button id="btn-view-other-division" class="secondary-btn full-width" style="margin-bottom:14px;">View Other Division</button>
+                <div class="section-header">
+                    <h2>Upcoming Fixtures</h2>
+                </div>
+                <div id="upcoming-fixtures"></div>
+
                 <div class="section-header">
                     <h2>Golden Boot</h2>
                 </div>
@@ -139,12 +152,26 @@
             <button class="tab-trigger" data-target="tab-league">
                 <span class="tab-icon">📊</span>
                 <span class="tab-label">TABLE</span>
+                <span id="league-unread-dot" class="unread-dot hidden"></span>
             </button>
             <button class="tab-trigger" data-target="tab-inbox">
                 <span class="tab-icon">📨</span>
                 <span class="tab-label">INBOX</span>
+                <span id="inbox-unread-dot" class="unread-dot hidden"></span>
             </button>
         </nav>
+    </div>
+
+    <div id="club-select-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3>Choose Your Club</h3>
+            <p class="subtext">Pick a starting club, or create your own.</p>
+            <div id="club-preset-list" class="card-grid" style="margin:14px 0;"></div>
+            <div style="margin-top:10px;">
+                <input id="custom-club-name" type="text" placeholder="Custom club name" style="width:100%;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);margin-bottom:8px;">
+                <button id="btn-start-custom-club" class="primary-btn full-width">Start with Custom Club</button>
+            </div>
+        </div>
     </div>
 
     <!-- Alert Modal Overlay -->
@@ -152,6 +179,8 @@
         <div class="modal-card">
             <h3 id="modal-title">Notification</h3>
             <p id="modal-body">Text content here...</p>
+            <div id="modal-extra"></div>
+            <div id="modal-actions"></div>
             <button id="modal-close" class="primary-btn">Acknowledge</button>
         </div>
     </div>

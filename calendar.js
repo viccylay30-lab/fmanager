@@ -42,6 +42,15 @@ export function isTransferWindowOpen(date) {
     return null;
 }
 
+/** True during the final week of either window - deadline day activity spike. */
+export function isDeadlineWeek(date) {
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    if (month === 7 && day >= 25) return true; // last week of August
+    if (month === 0 && day >= 25) return true; // last week of January
+    return false;
+}
+
 /** Assign a random real birthdate consistent with being `age` on `referenceDate`. */
 export function assignBirthdate(age, referenceDate) {
     const birthYear = referenceDate.getUTCFullYear() - age;

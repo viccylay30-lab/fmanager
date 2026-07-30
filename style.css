@@ -69,6 +69,84 @@
 .decision-card .accept-btn { background: var(--accent-success, #2e7d32); color: #fff; }
 .decision-card .reject-btn { background: var(--accent-danger); color: #fff; }
 
+.tactic-picker {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+.tactic-option {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+.tactic-option.active {
+    background: var(--accent-primary);
+    color: #06231a;
+    border-color: var(--accent-primary);
+}
+#modal-extra { text-align: left; font-size: 12px; color: var(--text-muted); margin-bottom: 10px; max-height: 260px; overflow-y: auto; }
+#modal-extra .attr-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border-color); }
+#modal-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+#modal-actions button { flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: 700; }
+#modal-actions .confirm-btn { background: var(--accent-primary); color: #06231a; }
+#modal-actions .cancel-btn { background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border-color); }
+.tab-trigger { position: relative; }
+.unread-dot {
+    position: absolute;
+    top: 4px;
+    right: 18%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-danger);
+}
+.league-table tr { cursor: pointer; }
+
+.crest {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 800;
+    color: #fff;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+.club-preset-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    margin-bottom: 8px;
+}
+.club-preset-card .info { flex: 1; }
+.club-preset-card .name { font-weight: 700; font-size: 13px; }
+.club-preset-card .desc { font-size: 11px; color: var(--text-muted); }
+.club-preset-card button { padding: 8px 14px; border-radius: 6px; border: none; background: var(--accent-primary); color: #06231a; font-weight: 700; }
+
+.club-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 0;
+    font-weight: 700;
+    font-size: 13px;
+}
+
 :root {
     --bg-primary: #0b0f19;
     --bg-secondary: #131b2e;
@@ -392,7 +470,7 @@ body {
 }
 
 .modal-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;

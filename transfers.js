@@ -23,7 +23,7 @@ function rivalAvgCA(rival) {
  * Roll for new incoming bids. Call this weekly, but it only does anything
  * while a transfer window is open (pass the result of isTransferWindowOpen).
  */
-export function generateIncomingBids(gameState, windowType) {
+export function generateIncomingBids(gameState, windowType, isDeadline = false) {
     if (!windowType) return [];
     const newBids = [];
 
@@ -33,6 +33,7 @@ export function generateIncomingBids(gameState, windowType) {
 
         for (const player of gameState.squad) {
             if (player.isInjured) continue; // clubs don't chase injured players mid-recovery
+            if (player.onLoanAt) continue; // can't buy a player who's out on loan elsewhere until the loan ends
             if ((player.contractYearsRemaining ?? 3) <= 0) continue; // already handled as a free elsewhere
 
             // Realistic targeting: a rival will only seriously come in for a player
@@ -46,11 +47,12 @@ export function generateIncomingBids(gameState, windowType) {
 
             if (!isReachable || !canAfford) continue;
 
-            // Small weekly probability even when eligible - most eligible pairings
-            // never actually produce a bid in a given window. Scaled by the rival's
-            // manager-ai transfer-aggression trait: proactive managers chase more.
+            // Base weekly probability, scaled by the rival's transfer-aggression
+            // trait, and roughly tripled in the final week of a window - real
+            // deadline day activity is a genuine spike, not a flat rate.
             const activityMult = rival.managerProfile ? transferActivityMultiplier(rival.managerProfile) : 1.0;
-            if (Math.random() > 0.025 * activityMult) continue;
+            const deadlineMult = isDeadline ? 3.0 : 1.0;
+            if (Math.random() > 0.045 * activityMult * deadlineMult) continue;
 
             const offerAmount = Math.round(value * (0.75 + Math.random() * 0.5) * 10) / 10;
 
@@ -73,12 +75,34 @@ export function generateIncomingBids(gameState, windowType) {
                 playerName: player.name,
                 offerAmount,
                 marketValue: value,
+                rivalBudget,
                 personalTermsAgreed,
                 status: 'pending'
             });
         }
     }
     return newBids;
+}
+
+/**
+ * Counter a bid with a higher asking price. The rival accepts if the new
+ * amount is still within their budget and not absurdly above market value;
+ * otherwise they walk away rather than negotiate indefinitely (one counter
+ * round, not an open-ended auction - keeps this decisive rather than fiddly).
+ */
+export function counterBid(bid, counterAmount) {
+    const rivalBudget = bid.rivalBudget ?? bid.marketValue * 1.3;
+    const withinBudget = counterAmount <= rivalBudget;
+    const withinCeiling = counterAmount <= bid.marketValue * 1.5; // won't blow the valuation out of the water
+    const accepted = withinBudget && withinCeiling && Math.random() < 0.55; // even a fair counter isn't guaranteed
+
+    return {
+        accepted,
+        finalAmount: accepted ? counterAmount : null,
+        headline: accepted
+            ? `${bid.rivalName} accept the improved offer of £${counterAmount}M for ${bid.playerName}`
+            : `${bid.rivalName} walk away after their bid for ${bid.playerName} was countered`
+    };
 }
 
 /**

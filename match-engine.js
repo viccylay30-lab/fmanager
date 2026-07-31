@@ -20,6 +20,7 @@
 
 import { POSITION_PROFILES } from './attributes.js';
 import { chasingGameBoost } from './manager-ai.js';
+import { setPieceBonus } from './formations.js';
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -80,9 +81,14 @@ const WEATHER_EFFECTS = {
  */
 export function computeMatchStrength(team, opponentTactic, weather, isHome, manager) {
     const seasonFactor = team.seasonFactor || 1.0; // some teams just run hot/cold for a whole season
-    const attack = teamPhaseStrength(team.squad, ATTACK_ATTRS);
-    const defense = teamPhaseStrength(team.squad, DEFENSE_ATTRS);
-    const creativity = teamPhaseStrength(team.squad, CREATIVITY_ATTRS);
+    // A real formation-picked Starting XI when available; otherwise fall back
+    // to the whole non-injured squad (rival/European AI clubs without a
+    // formation assigned yet) so nothing breaks for teams that don't set one.
+    const onPitch = team.startingXI && team.startingXI.length > 0 ? team.startingXI : team.squad;
+    const attack = teamPhaseStrength(onPitch, ATTACK_ATTRS);
+    const defense = teamPhaseStrength(onPitch, DEFENSE_ATTRS);
+    const creativity = teamPhaseStrength(onPitch, CREATIVITY_ATTRS);
+    const spBonus = team.startingXI && team.startingXI.length > 0 ? setPieceBonus(team.startingXI) : 1.0;
 
     const tacticMod = (TACTIC_MATCHUPS[team.tactic] || TACTIC_MATCHUPS.possession)[opponentTactic] || 1.0;
     const weatherMod = WEATHER_EFFECTS[weather] || WEATHER_EFFECTS.clear;
@@ -91,8 +97,9 @@ export function computeMatchStrength(team, opponentTactic, weather, isHome, mana
     const familiarityMod = 0.92 + (team.tacticalFamiliarity / 100) * 0.16; // new tactic = shakier execution
     const managerMod = 0.95 + (manager / 100) * 0.1;
 
+    const shapeMod = team.shapeMod || { attack: 1.0, defense: 1.0, creativity: 1.0 };
     const effectiveAttack = attack * tacticMod * weatherMod.attack * homeMod *
-        chemistryMod * familiarityMod * managerMod;
+        chemistryMod * familiarityMod * managerMod * shapeMod.attack * spBonus;
 
     // High pressing tires the press team out over 90 mins, modeled as a
     // creativity/defense penalty that scales with how long they've been at it.
@@ -100,8 +107,8 @@ export function computeMatchStrength(team, opponentTactic, weather, isHome, mana
 
     return {
         attack: effectiveAttack * seasonFactor,
-        defense: (defense * chemistryMod * familiarityMod) * seasonFactor,
-        creativity: ((creativity * chemistryMod) - pressFatiguePenalty) * seasonFactor
+        defense: (defense * chemistryMod * familiarityMod * shapeMod.defense) * seasonFactor,
+        creativity: ((creativity * chemistryMod * shapeMod.creativity) - pressFatiguePenalty) * seasonFactor
     };
 }
 
@@ -200,7 +207,7 @@ function computeMatchRatings(squad, teamGoals, opponentGoals, goalScorers, assis
  * in the match, not the final score - a team that concedes early plays the
  * next 80 minutes differently than one that concedes in the 89th.
  */
-export function simulateMatch({ home, away, weather = 'clear', isBigMatch = false }) {
+export function simulateMatch({ home, away, weather = 'clear', isBigMatch = false, homeSubs = [], awaySubs = [] }) {
     const homeStrength = computeMatchStrength(home, away.tactic, weather, true, home.managerQuality);
     const awayStrength = computeMatchStrength(away, home.tactic, weather, false, away.managerQuality);
 
@@ -215,11 +222,35 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
     const awayProfile = away.managerProfile || { aggression: 12 };
 
     const MOMENTS = 24; // abstracted attacking "moments" across 90 minutes - not literal minutes
+    const HALFTIME_MOMENT = MOMENTS / 2;
     let homeGoals = 0, awayGoals = 0;
     let homeXGAccum = 0, awayXGAccum = 0;
     const events = [];
 
+    // In-match management: the on-pitch XI can change at halftime. homeSubs/
+    // awaySubs are pre-decided by the caller (app.js shows a halftime screen
+    // and lets the manager pick before the second half resumes) as
+    // [{ outId, inPlayer }] pairs resolved against the Starting XI/bench.
+    let homeActive = home.startingXI && home.startingXI.length > 0 ? [...home.startingXI] : home.squad;
+    let awayActive = away.startingXI && away.startingXI.length > 0 ? [...away.startingXI] : away.squad;
+    const subEvents = [];
+
     for (let moment = 0; moment < MOMENTS; moment++) {
+        if (moment === HALFTIME_MOMENT) {
+            if (homeSubs.length > 0) {
+                homeSubs.forEach(sub => {
+                    const idx = homeActive.findIndex(p => p.id === sub.outId);
+                    if (idx !== -1 && sub.inPlayer) { homeActive[idx] = sub.inPlayer; subEvents.push({ team: 'home', outId: sub.outId, inName: sub.inPlayer.name, moment }); }
+                });
+            }
+            if (awaySubs.length > 0) {
+                awaySubs.forEach(sub => {
+                    const idx = awayActive.findIndex(p => p.id === sub.outId);
+                    if (idx !== -1 && sub.inPlayer) { awayActive[idx] = sub.inPlayer; subEvents.push({ team: 'away', outId: sub.outId, inName: sub.inPlayer.name, moment }); }
+                });
+            }
+        }
+
         // Chasing-the-game: whichever side is behind RIGHT NOW gets a small
         // temporary boost to their chance rate, scaled by their manager's
         // aggression trait. Recomputed every moment since the score can change.
@@ -232,20 +263,20 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
         awayXGAccum += awayMomentRate;
 
         if (Math.random() < homeMomentRate) {
-            const taker = pickChanceTaker(home.squad);
+            const taker = pickChanceTaker(homeActive);
             const baseQuality = 0.3 + Math.random() * 0.4;
             if (resolveChance(taker, baseQuality, isBigMatch)) {
                 homeGoals++;
-                const assister = taker ? pickAssister(home.squad, taker.name) : null;
+                const assister = taker ? pickAssister(homeActive, taker.name) : null;
                 events.push({ team: 'home', type: 'goal', player: taker?.name, assist: assister, moment });
             }
         }
         if (Math.random() < awayMomentRate) {
-            const taker = pickChanceTaker(away.squad);
+            const taker = pickChanceTaker(awayActive);
             const baseQuality = 0.3 + Math.random() * 0.4;
             if (resolveChance(taker, baseQuality, isBigMatch)) {
                 awayGoals++;
-                const assister = taker ? pickAssister(away.squad, taker.name) : null;
+                const assister = taker ? pickAssister(awayActive, taker.name) : null;
                 events.push({ team: 'away', type: 'goal', player: taker?.name, assist: assister, moment });
             }
         }
@@ -264,8 +295,17 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
     const awayScorers = events.filter(e => e.team === 'away' && e.type === 'goal').map(e => e.player);
     const awayAssisters = events.filter(e => e.team === 'away' && e.type === 'goal' && e.assist).map(e => e.assist);
 
-    const homeRatings = computeMatchRatings(home.squad, homeGoals, awayGoals, homeScorers, homeAssisters);
-    const awayRatings = computeMatchRatings(away.squad, awayGoals, homeGoals, awayScorers, awayAssisters);
+    // Ratings cover everyone who actually appeared: the original Starting XI
+    // plus anyone brought on as a substitute (a subbed-off player still gets
+    // a rating for the minutes they played; granular per-minute rating decay
+    // isn't modeled, matching this engine's existing abstraction level).
+    const homeSquadForRatings = home.startingXI && home.startingXI.length > 0
+        ? [...new Set([...home.startingXI, ...homeActive])] : home.squad;
+    const awaySquadForRatings = away.startingXI && away.startingXI.length > 0
+        ? [...new Set([...away.startingXI, ...awayActive])] : away.squad;
+
+    const homeRatings = computeMatchRatings(homeSquadForRatings, homeGoals, awayGoals, homeScorers, homeAssisters);
+    const awayRatings = computeMatchRatings(awaySquadForRatings, awayGoals, homeGoals, awayScorers, awayAssisters);
     const playerRatings = [...homeRatings, ...awayRatings];
     const mvp = playerRatings.reduce((best, p) => (!best || p.rating > best.rating ? p : best), null);
 
@@ -274,6 +314,7 @@ export function simulateMatch({ home, away, weather = 'clear', isBigMatch = fals
         homeXG: +homeXGAccum.toFixed(2),
         awayXG: +awayXGAccum.toFixed(2),
         events,
+        subEvents,
         playerRatings,
         mvp: mvp ? mvp.name : null,
         winner: homeGoals > awayGoals ? home.name : awayGoals > homeGoals ? away.name : 'Draw'

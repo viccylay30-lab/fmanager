@@ -30,7 +30,7 @@ function ageGrowthFactor(age) {
  * @param {object} club - { facilities: 1-20, coachingQuality: 1-20 }
  * @param {object} monthInfo - { season, month } - for logging only
  */
-export function developPlayer(player, club = { facilities: 10, coachingQuality: 10 }, monthInfo = {}) {
+export function developPlayer(player, club = { facilities: 10, coachingQuality: 10 }, monthInfo = {}, trainingGrowthMult = 1.0) {
     const h = player.hidden;
     const caBefore = player.ca;
     const headroom = player.pa - player.ca;
@@ -64,7 +64,8 @@ export function developPlayer(player, club = { facilities: 10, coachingQuality: 
     const adaptabilityFactor = 0.9 + (h.adaptability / 20) * 0.2; // helps settle into new club/tactics faster
 
     const expectedGrowth = headroom * 0.026 * ageGrowthFactor(player.age) *
-        trainingFactor * minutesFactor * moraleFactor * facilitiesFactor * injuryPenalty * adaptabilityFactor;
+        trainingFactor * minutesFactor * moraleFactor * facilitiesFactor * injuryPenalty * adaptabilityFactor *
+        clamp(trainingGrowthMult, 0.4, 1.6);
 
     // Non-linearity: most months are close to expected, but there's a real
     // chance of a breakout leap or a stagnant/regressive month.

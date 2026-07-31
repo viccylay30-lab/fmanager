@@ -13,16 +13,25 @@
 import { generateRivals, generateSchedule, simulateRound, sortTable } from './league.js';
 
 /** Build a fresh, fully independent division of 20 AI clubs (no human club in it). */
-export function generateIndependentDivision() {
-    const rivals = generateRivals(); // 19 named clubs
-    const extra = generateRivals()[0]; // borrow one more generated club to reach 20
+export function generateIndependentDivision(referenceDate = new Date()) {
+    const rivals = generateRivals(referenceDate); // 19 named clubs
+    const extra = generateRivals(referenceDate)[0]; // borrow one more generated club to reach 20
     extra.id = extra.id + '-x2';
     extra.name = extra.name + ' II';
     const allClubs = [...rivals, extra];
     // Force every id to be unique to THIS division - both divisions draw names
     // from the same fixed pool, so ids would otherwise collide across divisions
     // and corrupt promotion/relegation filtering (a real bug caught by testing).
-    allClubs.forEach(c => { c.id = c.id + '-D2'; });
+    // Player ids need the same treatment as club ids: two same-named clubs in
+    // each division independently generate players with identical
+    // `${name}-${index}` ids, and once a club is promoted/relegated those
+    // colliding ids end up sitting in the same gameState.rivals list (or even
+    // gameState.squad, via a pre-contract signing) as a DIFFERENT, unrelated
+    // player - a real cross-division id collision caught by testing.
+    allClubs.forEach(c => {
+        c.id = c.id + '-D2';
+        c.squad.forEach(p => { p.id = p.id + '-D2'; });
+    });
     const schedule = generateSchedule(20);
     const cleanTable = allClubs.map(c => ({ id: c.id, name: c.name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0 }));
     return { clubs: allClubs, schedule, table: cleanTable };

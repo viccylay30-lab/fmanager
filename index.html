@@ -85,6 +85,21 @@
                 <div id="tactic-picker" class="tactic-picker"></div>
 
                 <div class="section-header">
+                    <h2>Team Sheet</h2>
+                </div>
+                <div id="team-sheet"></div>
+
+                <div class="section-header">
+                    <h2>Weekly Training Focus</h2>
+                </div>
+                <div id="training-picker" class="tactic-picker"></div>
+
+                <div class="section-header">
+                    <h2>Press Conference</h2>
+                </div>
+                <button id="btn-press-conference" class="secondary-btn full-width" style="margin-bottom:14px;" disabled>Attend This Week's Press Conference</button>
+
+                <div class="section-header">
                     <h2>Matchday & Disciplinary Hub</h2>
                     <span class="subtext">2026/27 Strict Rules Enforced</span>
                 </div>
@@ -132,6 +147,48 @@
                     <h2>Loan Requests</h2>
                 </div>
                 <div id="loan-list"></div>
+                <div class="section-header">
+                    <h2>Contract Situations</h2>
+                </div>
+                <div id="contract-negotiations"></div>
+            </section>
+
+            <section id="tab-club" class="tab-content">
+                <div class="section-header">
+                    <h2>Team Dynamics</h2>
+                </div>
+                <div id="team-dynamics-panel"></div>
+
+                <div class="section-header">
+                    <h2>Transfer Requests</h2>
+                </div>
+                <div id="transfer-requests-panel"></div>
+
+                <div class="section-header">
+                    <h2>Finances</h2>
+                </div>
+                <div id="finance-ledger"></div>
+
+                <div class="section-header">
+                    <h2>Backroom Staff</h2>
+                </div>
+                <div id="staff-panel"></div>
+
+                <div class="section-header">
+                    <h2>Youth Academy</h2>
+                </div>
+                <div id="youth-squad-list"></div>
+
+                <div class="section-header">
+                    <h2>Rival Clubs</h2>
+                    <span class="subtext">Approach players in their final contract year</span>
+                </div>
+                <div id="rival-clubs-list"></div>
+
+                <div class="section-header">
+                    <h2>International Duty Report</h2>
+                </div>
+                <div id="international-report"></div>
             </section>
         </main>
 
@@ -159,6 +216,10 @@
                 <span class="tab-label">INBOX</span>
                 <span id="inbox-unread-dot" class="unread-dot hidden"></span>
             </button>
+            <button class="tab-trigger" data-target="tab-club">
+                <span class="tab-icon">🏟️</span>
+                <span class="tab-label">CLUB</span>
+            </button>
         </nav>
     </div>
 
@@ -166,6 +227,14 @@
         <div class="modal-card">
             <h3>Choose Your Club</h3>
             <p class="subtext">Pick a starting club, or create your own.</p>
+
+            <p style="margin:10px 0 4px;font-weight:700;">Starting Division</p>
+            <div class="btn-row" style="margin-bottom:10px;">
+                <button class="tactic-option" data-division-choice="1">Division 1 - Top Flight</button>
+                <button class="tactic-option" data-division-choice="2">Division 2 - Second Tier</button>
+            </div>
+            <button id="btn-preview-leagues" class="secondary-btn full-width" style="margin-bottom:14px;">Preview League Spread</button>
+
             <div id="club-preset-list" class="card-grid" style="margin:14px 0;"></div>
             <div style="margin-top:10px;">
                 <input id="custom-club-name" type="text" placeholder="Custom club name" style="width:100%;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);margin-bottom:8px;">

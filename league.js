@@ -15,6 +15,7 @@ import { simulateMatch } from './match-engine.js';
 import { generateManagerProfile, maybeSwitchTactic } from './manager-ai.js';
 import { evaluateSackRisk } from './boardroom.js';
 import { applyMatchStatsToPlayers } from './career.js';
+import { assignBirthdate } from './calendar.js';
 
 const RIVAL_NAMES = [
     'Ironbridge FC', 'Castlemoor Town', 'Redgate Athletic', 'Vale United', 'Harborne City',
@@ -33,7 +34,7 @@ const SQUAD_TEMPLATE = [
 ]; // 21 players, 2+ per position - same depth as the human-managed club
 
 /** Roll a fresh 20-team league: 19 rivals with real (persistent, full-depth) squads. */
-export function generateRivals() {
+export function generateRivals(referenceDate = new Date()) {
     return RIVAL_NAMES.map((name, idx) => {
         // Spread quality across the division so there's a real top/mid/bottom -
         // not every rival is the same strength.
@@ -45,10 +46,16 @@ export function generateRivals() {
             for (let i = 0; i < count; i++) {
                 const roleOffset = i === 0 ? 1 : i === count - 1 ? -2 : 0;
                 const qualityTier = Math.max(2, Math.min(9, baseTier + roleOffset + (Math.random() < 0.5 ? 0 : -1)));
-                squad.push(createPlayer({
+                const age = 18 + Math.floor(Math.random() * 16);
+                const player = createPlayer({
                     id: `${name}-${playerIdx}`, name: `${name.split(' ')[0]} ${position}${playerIdx}`,
-                    position, age: 18 + Math.floor(Math.random() * 16), qualityTier
-                }));
+                    position, age, qualityTier
+                });
+                // Real birthdate so rival-ai.js's weekly aging tick and
+                // development.js's age-decline curve actually apply to
+                // rivals, not just growth with no aging arc.
+                player.birthdate = assignBirthdate(age, referenceDate);
+                squad.push(player);
                 playerIdx++;
             }
         });
@@ -59,6 +66,7 @@ export function generateRivals() {
             tacticalFamiliarity: 45 + Math.random() * 45,
             managerQuality: 40 + Math.random() * 50,
             budget: 5 + tier * 4 + Math.random() * 10,
+            tier: baseTier, // used by rival-ai.js to scale replacement-signing quality to this club's level
             seasonFactor: 1.0,
             managerProfile: generateManagerProfile(),
             recentForm: []
@@ -143,15 +151,22 @@ export function sortTable(table) {
  *
  * @returns { yourResult, allResults, scorers: [{name, team, goals:1}] }
  */
-export function simulateRound(round, teamsById, table, weather, isBigMatch = false) {
+export function simulateRound(round, teamsById, table, weather, isBigMatch = false, homeSubsForYou = [], awaySubsForYou = []) {
     const scorers = [];
     const boardroomEvents = [];
     let yourResult = null;
+    let yourMatchResult = null;
 
     for (const [homeIdx, awayIdx] of round) {
         const homeTeam = teamsById[homeIdx];
         const awayTeam = teamsById[awayIdx];
-        const result = simulateMatch({ home: homeTeam, away: awayTeam, weather, isBigMatch });
+        const involvesYou = homeTeam.id === 'YOU' || awayTeam.id === 'YOU';
+        const result = simulateMatch({
+            home: homeTeam, away: awayTeam, weather, isBigMatch,
+            homeSubs: involvesYou && homeTeam.id === 'YOU' ? homeSubsForYou : [],
+            awaySubs: involvesYou && awayTeam.id === 'YOU' ? awaySubsForYou : []
+        });
+        if (involvesYou) yourMatchResult = result;
         applyResult(table, homeTeam.id, awayTeam.id, result.homeGoals, result.awayGoals);
         applyMatchStatsToPlayers(result, homeTeam.squad, awayTeam.squad);
 
@@ -190,7 +205,7 @@ export function simulateRound(round, teamsById, table, weather, isBigMatch = fal
         if (event) boardroomEvents.push({ club: rival.name, ...event });
     }
 
-    return { yourResult, scorers, boardroomEvents };
+    return { yourResult, scorers, boardroomEvents, yourMatchResult };
 }
 
 /** Merge this round's scorers into a running Golden Boot leaderboard. */

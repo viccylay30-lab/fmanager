@@ -23,7 +23,7 @@ const RISK_CEILING = 0.16;     // hard cap - even the most fragile, exhausted,
  * @param {object} context - { matchLoad: 0-2 (fixture congestion), trainingIntensity: 'low'|'normal'|'high' }
  */
 export function computeWeeklyInjuryRisk(player, context = {}) {
-    const { matchLoad = 1, trainingIntensity = 'normal' } = context;
+    const { matchLoad = 1, trainingIntensity = 'normal', physioQuality = 0 } = context;
     const h = player.hidden;
 
     const proneMult = 0.4 + (h.injuryProneness / 20) * 1.6;
@@ -37,9 +37,11 @@ export function computeWeeklyInjuryRisk(player, context = {}) {
     const loadMult = 1 + matchLoad * 0.35;
     const trainingMult = { low: 0.85, normal: 1.0, high: 1.3 }[trainingIntensity] ?? 1.0;
     const priorInjuryMult = clamp(1 + player.injuryHistory.length * 0.07, 1, 1.6);
+    // A good physio catches niggles before they become injuries - up to ~24% risk reduction at quality 20.
+    const physioMult = 1 - clamp(physioQuality / 20, 0, 1) * 0.24;
 
     const risk = BASE_WEEKLY_RISK * proneMult * fitnessMult * ageMult *
-        fatigueMult * loadMult * trainingMult * priorInjuryMult;
+        fatigueMult * loadMult * trainingMult * priorInjuryMult * physioMult;
 
     return clamp(risk, 0.001, RISK_CEILING);
 }
@@ -124,9 +126,13 @@ export function weeklyInjuryCheck(player, context = {}, seasonWeek = { season: 1
  * Call once per in-game week for every injured player to tick recovery down.
  * Applies a short post-recovery form/sharpness dip once they're back.
  */
-export function tickRecovery(player) {
+export function tickRecovery(player, physioQuality = 0) {
     if (!player.isInjured) return;
-    player.injuryWeeksRemaining -= 1;
+    // A good physio can shave recovery time down - roughly a 1-in-4 chance
+    // of an extra week knocked off at max physio quality, never guaranteed.
+    const extraRecoveryChance = clamp(physioQuality / 20, 0, 1) * 0.25;
+    const weeksOff = 1 + (Math.random() < extraRecoveryChance ? 1 : 0);
+    player.injuryWeeksRemaining -= weeksOff;
     if (player.injuryWeeksRemaining <= 0) {
         player.isInjured = false;
         player.injuryWeeksRemaining = 0;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fm-pwa-cache-v14';
+const CACHE_NAME = 'fm-pwa-cache-v17';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
@@ -19,7 +19,17 @@ const ASSETS_TO_CACHE = [
   './career.js',
   './awards.js',
   './contracts.js',
-  './rival-transfers.js',
+  './formations.js',
+  './training.js',
+  './youth.js',
+  './finances.js',
+  './negotiations.js',
+  './negotiation-engine.js',
+  './staff.js',
+  './media.js',
+  './international.js',
+  './rival-ai.js',
+  './dynamics.js',
   './manifest.json'
 ];
 

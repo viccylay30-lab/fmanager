@@ -22,7 +22,7 @@ const LOAN_ELIGIBLE_MAX_APPEARANCES = 15; // fringe players too, not just teenag
  * Roll for new incoming loan requests. Only smaller/mid clubs request loans -
  * a top rival signs players outright, not on loan, for a young talent.
  */
-export function generateLoanRequests(gameState, windowType, isDeadline = false) {
+export function generateLoanRequests(gameState, windowType) {
     if (!windowType) return [];
     const requests = [];
 
@@ -36,8 +36,7 @@ export function generateLoanRequests(gameState, windowType, isDeadline = false) 
             const eligible = player.age <= LOAN_ELIGIBLE_MAX_AGE || (player.appearances || 0) <= LOAN_ELIGIBLE_MAX_APPEARANCES;
             if (!eligible) continue;
 
-            const deadlineMult = isDeadline ? 2.5 : 1.0;
-            if (Math.random() > 0.035 * deadlineMult) continue;
+            if (Math.random() > 0.02) continue;
 
             requests.push({
                 id: `loan-${rival.id}-${player.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
